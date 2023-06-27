@@ -54,7 +54,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "c3:2b:e9:bb:d5:05:32:ab:df:ce:2b:c3:e5:f7:95:42"
+            - "25:33:ce:33:cd:ae:73:b4:37:05:6a:c0:c7:cc:b3:aa"
       - checkout
       - run:
           name: install dependencies
@@ -118,7 +118,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "c3:2b:e9:bb:d5:05:32:ab:df:ce:2b:c3:e5:f7:95:42"
+            - "25:33:ce:33:cd:ae:73:b4:37:05:6a:c0:c7:cc:b3:aa"
       - checkout
       - run:
           name: publish to npm

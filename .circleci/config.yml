@@ -129,10 +129,10 @@ jobs:
             git rebase
             echo "//registry.npmjs.org/:_authToken=$CLOUD_MTA_BOT_NPM_TOKEN" > .npmrc
             npm install
-            npm publish
+            npm publish --access=public
             #Publish the mta-local package
             node convertPackageJsonToMtaLocal.js
-            npm publish
+            npm publish --access=public
       - run:
           name: remove dummy release tag
           command: |

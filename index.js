@@ -2,7 +2,7 @@ var binwrap = require('binwrap');
 
 var packageInfo = require("./package.json");
 var version = packageInfo.version;
-var root = `https://github.com/SAP/cloud-mta/releases/download/v${version}/cloud-mta_${version}_`;
+var root = `https://github.com/wangshen-sap/cloud-mta/releases/download/v${version}/cloud-mta_${version}_`;
 
 module.exports = binwrap({
     dirname: __dirname,

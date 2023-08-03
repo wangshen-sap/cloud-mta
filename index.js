@@ -1,4 +1,4 @@
-var binwrap = require('binwrap');
+var binwrap = require('./binwrap');
 
 var packageInfo = require("./package.json");
 var version = packageInfo.version;

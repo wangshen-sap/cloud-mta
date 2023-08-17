@@ -119,7 +119,7 @@ jobs:
             
   publish:
     docker:
-      - image: circleci/node:18.14.2
+      - image: cimg/node:lts
     working_directory: ~/go/src/github.com/wangshen-sap/cloud-mta
     steps:
       - add_ssh_keys:

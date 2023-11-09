@@ -3,7 +3,6 @@ var tar = require("tar");
 var zlib = require("zlib");
 var unzip = require("unzip-stream");
 var path = require("path");
-const { error } = require("console");
 var pipeline = require('node:stream/promises').pipeline;
 var https = require('follow-redirects').https;
 

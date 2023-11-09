@@ -1,10 +1,11 @@
 var fs = require("fs");
-var axios = require("axios");
 var tar = require("tar");
 var zlib = require("zlib");
 var unzip = require("unzip-stream");
 var path = require("path");
-
+const { error } = require("console");
+var pipeline = require('node:stream/promises').pipeline;
+var https = require('follow-redirects').https;
 
 var packageInfo = require(path.join(process.cwd(), "package.json"));
 var version = packageInfo.version;
@@ -35,9 +36,6 @@ var config = {
       'win32-x64': root + 'Windows_amd64.tar.gz'
   }
 };
-if (!fs.existsSync("bin")) {
-  fs.mkdirSync("bin");
-}
 
 var binExt = "";
 if (os == "win32") {
@@ -49,20 +47,26 @@ var url = config.urls[buildId];
 if (!url) {
   throw new Error("No binaries are available for your platform: " + buildId);
 }
-function binstall(url, path, options) {
+function httpsGet(url, resolve, reject) {
+  https.get(url, res => {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      resolve(res);
+    } else {
+      reject(null, res);
+    }
+  }).on('errer', e => {
+    reject(e, res);
+  });
+}
+function binstall(url, path) {
   if (url.endsWith(".zip")) {
-    return unzipUrl(url, path, options);
+    return unzipUrl(url, path);
   } else {
-    return untgz(url, path, options);
+    return untgz(url, path);
   }
 }
 
-function untgz(url, path, options) {
-  options = options || {};
-
-  var verbose = options.verbose;
-  var verify = options.verify;
-
+function untgz(url, path) {
   return new Promise(function (resolve, reject) {
     var untar = tar
       .x({ cwd: path })
@@ -70,17 +74,7 @@ function untgz(url, path, options) {
         reject("Error extracting " + url + " - " + error);
       })
       .on("end", function () {
-        var successMessage = "Successfully downloaded and processed " + url;
-
-        if (verify) {
-          verifyContents(verify)
-            .then(function () {
-              resolve(successMessage);
-            })
-            .catch(reject);
-        } else {
-          resolve(successMessage);
-        }
+          resolve("Successfully downloaded and processed " + url);
       });
 
     var gunzip = zlib.createGunzip().on("error", function (error) {
@@ -93,31 +87,19 @@ function untgz(url, path, options) {
       if (error.code !== "EEXIST") throw error;
     }
 
-    if (verbose) {
-      console.log("Downloading binaries from " + url);
-    }
-
-    axios
-      .get(url, { responseType: "stream" })
-      .then((response) => {
-        response.data.pipe(gunzip).pipe(untar);
-      })
-      .catch((error) => {
-        if (verbose) {
-          console.error(error);
-        } else {
-          console.error(error.message);
-        }
-      });
+    httpsGet(url, readStream => {
+      pipeline(readStream, gunzip, untar);
+    }, (error, res) => {
+      if (error) {
+        console.error(error.message);
+      } else {
+        console.error("Status Code: " + res.statusCode);
+      }
+    });
   });
 }
 
-function unzipUrl(url, path, options) {
-  options = options || {};
-
-  var verbose = options.verbose;
-  var verify = options.verify;
-
+function unzipUrl(url, path) {
   return new Promise(function (resolve, reject) {
     var writeStream = unzip
       .Extract({ path: path })
@@ -128,54 +110,23 @@ function unzipUrl(url, path, options) {
         console.log("Entry: " + entry.path);
       })
       .on("close", function () {
-        var successMessage = "Successfully downloaded and processed " + url;
+        var successMessage = "Successfully downloaded and processed " + url
 
-        if (verify) {
-          verifyContents(verify)
-            .then(function () {
-              resolve(successMessage);
-            })
-            .catch(reject);
-        } else {
-          resolve(successMessage);
-        }
+        resolve(successMessage);
+      
       });
 
-    if (verbose) {
-      console.log("Downloading binaries from " + url);
-    }
 
-    axios
-      .get(url, { responseType: "stream" })
-      .then((response) => {
-        response.data.pipe(writeStream);
-      })
-      .catch((error) => {
-        if (verbose) {
-          console.error(error);
-        } else {
-          console.error(error.message);
-        }
-      });
+    httpsGet(url, readStream => {
+      pipeline(readStream, writeStream);
+    }, (error, res) => {
+      if (error) {
+        console.error(error.message);
+      } else {
+        console.error("Status Code: " + res.statusCode);
+      }
+    });
   });
-}
-
-function verifyContents(files) {
-  return Promise.all(
-    files.map(function (filePath) {
-      return new Promise(function (resolve, reject) {
-        fs.stat(filePath, function (err, stats) {
-          if (err) {
-            reject(filePath + " was not found.");
-          } else if (!stats.isFile()) {
-            reject(filePath + " was not a file.");
-          } else {
-            resolve();
-          }
-        });
-      });
-    })
-  );
 }
 
 binstall(url, unpackedBinPath).then(function() {
